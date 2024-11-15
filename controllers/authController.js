@@ -29,3 +29,18 @@ exports.login = async (req, res) => {
         res.status(400).json({ error: "Login failed" });
     }
 };
+
+// Toggle Driver Online/Offline Status
+exports.toggleDriverStatus = async (req, res) => {
+    const { driverId } = req.body;
+    try {
+        const driver = await User.findById(driverId);
+        if (driver.role !== 'driver') return res.status(400).json({ error: "Only drivers can toggle status" });
+        
+        driver.isOnline = !driver.isOnline;
+        await driver.save();
+        res.json({ message: `Driver is now ${driver.isOnline ? "online" : "offline"}`, driver });
+    } catch (error) {
+        res.status(400).json({ error: "Failed to toggle status" });
+    }
+};
