@@ -39,9 +39,9 @@ exports.requestTrip = async (req, res) => {
 };
 
 // Accept Trip (Driver)
-
 exports.acceptTrip = async (req, res) => {
     const { tripId } = req.body;
+
     try {
         // Find the trip by ID
         const trip = await Trip.findById(tripId);
@@ -49,7 +49,7 @@ exports.acceptTrip = async (req, res) => {
             return res.status(404).json({ error: 'Trip not found' });
         }
 
-        // Check if the trip has a valid driverId
+        // Check if the trip has a valid driverId (ensure driverId is part of the trip)
         const driver = await User.findById(trip.driverId);
         if (!driver) {
             return res.status(404).json({ error: 'Driver not found' });
@@ -79,6 +79,7 @@ exports.acceptTrip = async (req, res) => {
         res.status(500).json({ error: 'Failed to accept trip' });
     }
 };
+
 
 // Previous Trips (Rider/Driver)
 exports.previousTrips = async (req, res) => {
