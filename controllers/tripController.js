@@ -38,41 +38,45 @@ exports.requestTrip = async (req, res) => {
     }
 };
 
-// Accept Trip (Driver)
-exports.acceptTrip = async (req, res) => {
-    const { tripId } = req.body;
-    const driverId = req.user.id; // Get driver ID from the authenticated user
-
-    try {
-        const trip = await Trip.findById(tripId);
-        if (!trip) {
-            return res.status(404).json({ error: 'Trip not found' });
+// Accept Trip (Driver)exports.acceptTrip = async (req, res) => {
+    exports.acceptTrip = async (req, res) => {
+        const { tripId } = req.body;
+        const driverId = req.user.id; // Get driver ID from the authenticated user
+    
+        try {
+            // Find the trip by ID
+            const trip = await Trip.findById(tripId);
+            if (!trip) {
+                return res.status(404).json({ error: 'Trip not found' });
+            }
+    
+            // Ensure the driver is available and online
+            const driver = await User.findById(driverId);
+            if (!driver) {
+                return res.status(404).json({ error: 'Driver not found' });
+            }
+    
+            if (!driver.isOnline) {
+                return res.status(400).json({ error: 'Driver not available or offline' });
+            }
+    
+            if (driver.role !== 'driver') {
+                return res.status(403).json({ error: 'Only drivers can accept trips' });
+            }
+    
+            // Update trip status to "accepted"
+            trip.status = 'accepted';
+            trip.driverId = driverId;  // Assign the driver to the trip
+            await trip.save();
+    
+            res.json({ message: 'Trip accepted successfully', trip });
+        } catch (error) {
+            console.error(error);
+            res.status(500).json({ error: 'Failed to accept trip' });
         }
+    };
+    
 
-        // Ensure the driver is available and online
-        const driver = await User.findById(driverId);
-        if (!driver) {
-            return res.status(404).json({ error: 'Driver not found' });
-        }
-
-        if (!driver.isOnline) {
-            return res.status(400).json({ error: 'Driver not available or offline' });
-        }
-
-        if (driver.role !== 'driver') {
-            return res.status(400).json({ error: 'Only drivers can accept trips' });
-        }
-
-        trip.status = 'accepted';
-        trip.driverId = driverId;  // Assign the driver to the trip
-        await trip.save();
-
-        res.json({ message: 'Trip accepted successfully', trip });
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Failed to accept trip' });
-    }
-};
 
 
 
