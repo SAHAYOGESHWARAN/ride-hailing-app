@@ -49,14 +49,11 @@ exports.acceptTrip = async (req, res) => {
             return res.status(404).json({ error: 'Trip not found' });
         }
 
-        // Check if the trip has a valid driverId (ensure driverId is part of the trip)
+        // Check if the trip has a valid driverId
         const driver = await User.findById(trip.driverId);
         if (!driver) {
             return res.status(404).json({ error: 'Driver not found' });
         }
-
-        // Log the driver's current status to help debug
-        console.log('Driver Status:', driver.isOnline);
 
         // Check if the driver is online
         if (!driver.isOnline) {
@@ -68,9 +65,8 @@ exports.acceptTrip = async (req, res) => {
             return res.status(400).json({ error: 'Only drivers can accept trips' });
         }
 
-        // Assign the driver to the trip
-        trip.driver = driver._id; // Add the driver to the trip
-        trip.status = 'accepted'; // Update trip status
+        // Update the trip status to accepted
+        trip.status = 'accepted';
         await trip.save();
 
         // Respond with the updated trip info
