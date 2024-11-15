@@ -54,37 +54,56 @@ exports.login = async (req, res) => {
 
 // Toggle Driver Online/Offline Status
 exports.toggleDriverStatus = async (req, res) => {
-    const { driverId } = req.body;
     try {
+        // Get the driverId from the body
+        const { driverId } = req.body;
+
+        if (!driverId) {
+            return res.status(400).json({ error: 'Driver ID is required' });
+        }
+
+        // Fetch the driver from the database
         const driver = await User.findById(driverId);
 
-        // Log the fetched driver data and current status
-        console.log('Driver:', driver);
-        console.log('New Status:', driver.isOnline);
-
+        // Check if driver exists
         if (!driver) {
             return res.status(404).json({ error: 'Driver not found' });
         }
 
-        // Ensure the driver is a driver
+        // Ensure the driver is a driver (role check)
         if (driver.role !== 'driver') {
-            return res.status(400).json({ error: "Only drivers can toggle status" });
+            return res.status(400).json({ error: 'Only drivers can toggle status' });
         }
 
-        // Toggle the online status
+        // Log the current status
+        console.log('Current Status:', driver.isOnline);
+
+        // Toggle the online/offline status
         driver.isOnline = !driver.isOnline;
 
-        // Log the new status before saving
+        // Log the new toggled status
         console.log('Toggled Status:', driver.isOnline);
 
+        // Save the driver with the new status
         await driver.save();
 
+        // Return the updated driver status
         res.json({
-            message: `Driver is now ${driver.isOnline ? "online" : "offline"}`,
-            driver
+            message: `Driver is now ${driver.isOnline ? 'online' : 'offline'}`,
+            status: driver.isOnline
         });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: "Failed to toggle status" });
+        // Log the error for debugging
+        console.error('Error toggling driver status:', error);
+
+        // Check for specific error types and provide more detailed responses
+        if (error instanceof TypeError) {
+            return res.status(500).json({ error: 'Unexpected error occurred while processing the request' });
+        } else if (error.name === 'CastError') {
+            return res.status(400).json({ error: 'Invalid driver ID format' });
+        }
+
+        // Default error response
+        res.status(500).json({ error: 'Failed to toggle status' });
     }
 };
