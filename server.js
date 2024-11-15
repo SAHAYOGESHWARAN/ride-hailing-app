@@ -3,6 +3,7 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const morgan = require('morgan');
+const tripRoutes = require('./routes/tripRoutes');
 
 dotenv.config(); // Load environment variables from .env
 
@@ -28,6 +29,7 @@ const authRoutes = require('./routes/authRoutes');
 const fareRoutes = require('./routes/fareRoutes');
 app.use('/api/auth', authRoutes);
 app.use('/api/fare', fareRoutes);
+app.use('/api/trip', tripRoutes); 
 
 // Start the server
 app.listen(PORT, () => {
