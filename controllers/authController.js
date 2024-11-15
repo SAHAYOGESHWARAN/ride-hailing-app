@@ -6,7 +6,6 @@ const jwt = require('jsonwebtoken');
 exports.register = async (req, res) => {
     const { name, email, password, role } = req.body;
     try {
-        // Check if user already exists
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.status(400).json({ error: 'User already exists' });
@@ -36,13 +35,11 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
     const { email, password } = req.body;
     try {
-        // Find the user by email
         const user = await User.findOne({ email });
         if (!user || !(await bcrypt.compare(password, user.password))) {
             return res.status(400).json({ error: "Invalid credentials" });
         }
 
-        // Generate a JWT token
         const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
         res.json({
@@ -59,13 +56,17 @@ exports.login = async (req, res) => {
 exports.toggleDriverStatus = async (req, res) => {
     const { driverId } = req.body;
     try {
-        // Find the driver by ID
         const driver = await User.findById(driverId);
 
-        // Ensure the driver exists and is of role 'driver'
+        // Log the fetched driver data and current status
+        console.log('Driver:', driver);
+        console.log('New Status:', driver.isOnline);
+
         if (!driver) {
             return res.status(404).json({ error: 'Driver not found' });
         }
+
+        // Ensure the driver is a driver
         if (driver.role !== 'driver') {
             return res.status(400).json({ error: "Only drivers can toggle status" });
         }
@@ -73,7 +74,9 @@ exports.toggleDriverStatus = async (req, res) => {
         // Toggle the online status
         driver.isOnline = !driver.isOnline;
 
-        // Save the updated driver status to the database
+        // Log the new status before saving
+        console.log('Toggled Status:', driver.isOnline);
+
         await driver.save();
 
         res.json({
