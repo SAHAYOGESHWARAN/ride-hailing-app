@@ -117,13 +117,15 @@ exports.toggleDriverStatus = async (req, res) => {
         if (driver.role !== 'driver') {
             return res.status(403).json({ error: 'Only drivers can toggle status' });
         }
-
-        driver.isOnline = !driver.isOnline;
-        await driver.save();
+        const updatedDriver = await User.findByIdAndUpdate(
+            driverId,
+            { isOnline: !driver.isOnline },
+            { new: true }
+        );
 
         res.json({
             message: `Driver is now ${driver.isOnline ? 'online' : 'offline'}`,
-            status: driver.isOnline
+            status: updatedDriver.isOnline
         });
     } catch (error) {
         handleErrorResponse(res, error, 'Failed to toggle driver status');
