@@ -1,6 +1,7 @@
-const User = require('../models/User');  // Assuming you have a User model
+const User = require('../models/User');  
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const Trip = require('../models/Trip');
 
 // Register User
 exports.register = async (req, res) => {
@@ -105,5 +106,42 @@ exports.toggleDriverStatus = async (req, res) => {
 
         // Default error response
         res.status(500).json({ error: 'Failed to toggle status' });
+    }
+};
+
+// Accept Trip
+exports.acceptTrip = async (req, res) => {
+    const { tripId } = req.body;
+    try {
+        // Find the trip by ID
+        const trip = await Trip.findById(tripId);
+        if (!trip) {
+            return res.status(404).json({ error: 'Trip not found' });
+        }
+
+        // Check if the driver is online (assuming the driver's status is stored in the `isOnline` field)
+        const driver = await User.findById(trip.driverId);  // Assuming driverId is stored in trip
+        if (!driver) {
+            return res.status(404).json({ error: 'Driver not found' });
+        }
+
+        if (!driver.isOnline) {
+            return res.status(400).json({ error: 'Driver not available or offline' });
+        }
+
+        // Ensure the driver is eligible to accept the trip
+        if (driver.role !== 'driver') {
+            return res.status(400).json({ error: 'Only drivers can accept trips' });
+        }
+
+        // Update trip status to "accepted"
+        trip.status = 'accepted';
+        await trip.save();
+
+        // Respond with the updated trip info
+        res.json({ message: 'Trip accepted successfully', trip });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Failed to accept trip' });
     }
 };
