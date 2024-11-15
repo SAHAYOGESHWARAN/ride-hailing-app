@@ -68,8 +68,9 @@ exports.acceptTrip = async (req, res) => {
             return res.status(400).json({ error: 'Only drivers can accept trips' });
         }
 
-        // Update trip status to "accepted"
-        trip.status = 'accepted';
+        // Assign the driver to the trip
+        trip.driver = driver._id; // Add the driver to the trip
+        trip.status = 'accepted'; // Update trip status
         await trip.save();
 
         // Respond with the updated trip info
@@ -79,6 +80,7 @@ exports.acceptTrip = async (req, res) => {
         res.status(500).json({ error: 'Failed to accept trip' });
     }
 };
+
 
 
 // Previous Trips (Rider/Driver)
