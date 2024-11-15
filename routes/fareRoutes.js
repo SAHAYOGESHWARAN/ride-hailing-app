@@ -16,7 +16,7 @@ router.get('/check', async (req, res, next) => {
     try {
         await checkFare(req, res);
     } catch (err) {
-        next(err); // Pass errors to global error handler
+        next(err); 
     }
 });
 

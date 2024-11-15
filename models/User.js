@@ -25,7 +25,7 @@ const userSchema = new mongoose.Schema(
             type: String,
             required: [true, 'Password is required'],
             minlength: [6, 'Password must be at least 6 characters long'],
-            select: false, // Exclude password from query results by default
+            select: false, 
         },
         role: {
             type: String,
@@ -38,11 +38,11 @@ const userSchema = new mongoose.Schema(
         },
         isDeleted: {
             type: Boolean,
-            default: false, // For soft deletes
+            default: false,
         },
     },
     {
-        timestamps: true, // Automatically add createdAt and updatedAt fields
+        timestamps: true, 
     }
 );
 

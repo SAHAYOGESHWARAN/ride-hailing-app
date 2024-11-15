@@ -15,7 +15,7 @@ const rateLimiter = rateLimit({
 // Role-based access control (RBAC) middleware
 const authorizeRoles = (roles) => {
     return (req, res, next) => {
-        const userRole = req.user?.role; // Extract the role from the authenticated user (set by authenticateToken)
+        const userRole = req.user?.role; 
 
         if (!roles.includes(userRole)) {
             return res.status(403).json({ error: 'You do not have permission to access this route.' });
@@ -27,13 +27,13 @@ const authorizeRoles = (roles) => {
 // Protected Route with rate limiting, validation, and role-based access control
 router.post(
     '/someProtectedRoute',
-    authenticateToken, // Middleware to authenticate the token
-    rateLimiter, // Apply rate limiting
+    authenticateToken, 
+    rateLimiter, 
     [
         // Input validation (example: validate the required field)
         body('inputField', 'Input field is required').notEmpty().isString(),
     ],
-    authorizeRoles(['admin', 'driver']), // Only allow 'admin' or 'driver' roles to access
+    authorizeRoles(['admin', 'driver']),
     (req, res) => {
         // If all checks pass, proceed with the protected logic
         const { inputField } = req.body;

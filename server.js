@@ -3,28 +3,28 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const morgan = require('morgan');
-const helmet = require('helmet');  // Security middleware
-const rateLimit = require('express-rate-limit');  // Rate limiting middleware
-const path = require('path');  // For serving static files
+const helmet = require('helmet');  
+const rateLimit = require('express-rate-limit');  
+const path = require('path');  
 
-// Load environment variables from .env
+
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware Setup
-app.use(helmet()); // Secure HTTP headers for better security
-app.use(express.json()); // Parse JSON requests
+app.use(helmet()); 
+app.use(express.json()); 
 app.use(cors({
-    origin: process.env.CORS_ORIGIN || '*', // Dynamic CORS origin, can be set in .env
-    methods: ['GET', 'POST', 'PUT', 'DELETE'], // Define allowed HTTP methods
-    allowedHeaders: ['Content-Type', 'Authorization'], // Allow specific headers
+    origin: process.env.CORS_ORIGIN || '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
 })); 
-app.use(morgan('dev')); // HTTP request logger for development
-app.use(rateLimit({ // Apply rate limiting to all routes
-    windowMs: 15 * 60 * 1000, // 15 minutes
-    max: 100, // Limit each IP to 100 requests per window
+app.use(morgan('dev')); 
+app.use(rateLimit({ 
+    windowMs: 15 * 60 * 1000,
+    max: 100, 
     message: 'Too many requests from this IP, please try again later.',
 }));
 
@@ -38,7 +38,7 @@ const connectDB = async () => {
         console.log('MongoDB connected successfully');
     } catch (error) {
         console.error('MongoDB connection error:', error);
-        process.exit(1); // Exit the process in case of connection failure
+        process.exit(1); 
     }
 };
 connectDB();

@@ -10,12 +10,12 @@ const tripSchema = new mongoose.Schema(
         driver: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
-            default: null, // Initially no driver assigned
+            default: null, 
         },
         origin: {
             type: String,
             required: true,
-            trim: true, // Removes extra spaces
+            trim: true,
         },
         destination: {
             type: String,
@@ -47,7 +47,7 @@ const tripSchema = new mongoose.Schema(
         paymentStatus: {
             type: String,
             enum: ['pending', 'completed', 'failed'],
-            default: 'pending', // Tracks payment for the trip
+            default: 'pending', 
         },
         requestedAt: {
             type: Date,
