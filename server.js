@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
+const someRouteFile = require('./routes/someRouteFile');
 const morgan = require('morgan');
 const tripRoutes = require('./routes/tripRoutes');
 
@@ -30,6 +31,7 @@ const fareRoutes = require('./routes/fareRoutes');
 app.use('/api/auth', authRoutes);
 app.use('/api/fare', fareRoutes);
 app.use('/api/trip', tripRoutes); 
+app.use('/api', someRouteFile);
 
 // Start the server
 app.listen(PORT, () => {
