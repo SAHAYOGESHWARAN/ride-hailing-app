@@ -41,35 +41,32 @@ exports.requestTrip = async (req, res) => {
 // Accept Trip (Driver)
 exports.acceptTrip = async (req, res) => {
     const { tripId } = req.body;
+    const driverId = req.user.id; // Get driver ID from the authenticated user
 
     try {
-        // Find the trip by ID
         const trip = await Trip.findById(tripId);
         if (!trip) {
             return res.status(404).json({ error: 'Trip not found' });
         }
 
-        // Check if the trip has a valid driverId
-        const driver = await User.findById(trip.driverId);
+        // Ensure the driver is available and online
+        const driver = await User.findById(driverId);
         if (!driver) {
             return res.status(404).json({ error: 'Driver not found' });
         }
 
-        // Check if the driver is online
         if (!driver.isOnline) {
             return res.status(400).json({ error: 'Driver not available or offline' });
         }
 
-        // Ensure the driver is eligible to accept the trip (check role)
         if (driver.role !== 'driver') {
             return res.status(400).json({ error: 'Only drivers can accept trips' });
         }
 
-        // Update the trip status to accepted
         trip.status = 'accepted';
+        trip.driverId = driverId;  // Assign the driver to the trip
         await trip.save();
 
-        // Respond with the updated trip info
         res.json({ message: 'Trip accepted successfully', trip });
     } catch (error) {
         console.error(error);
