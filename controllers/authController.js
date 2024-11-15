@@ -119,12 +119,16 @@ exports.acceptTrip = async (req, res) => {
             return res.status(404).json({ error: 'Trip not found' });
         }
 
-        // Check if the driver is online (assuming the driver's status is stored in the `isOnline` field)
+        console.log('Trip Status:', trip.status);
+
+        // Check if the driver is online
         const driver = await User.findById(trip.driverId);  // Assuming driverId is stored in trip
         if (!driver) {
             return res.status(404).json({ error: 'Driver not found' });
         }
 
+        console.log('Driver Status:', driver.isOnline);
+        
         if (!driver.isOnline) {
             return res.status(400).json({ error: 'Driver not available or offline' });
         }
