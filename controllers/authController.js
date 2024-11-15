@@ -1,6 +1,6 @@
-const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 const Trip = require('../models/Trip');
 
 // Utility function for error handling
@@ -56,25 +56,46 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
     const { email, password } = req.body;
 
-    if (!email || !password) {
-        return res.status(400).json({ error: 'Email and password are required' });
-    }
+    // Log to check if email and password are received correctly
+    console.log('Email:', email);
+    console.log('Password:', password);
 
     try {
-        const user = await User.findOne({ email });
-        if (!user || !(await bcrypt.compare(password, user.password))) {
-            return res.status(400).json({ error: 'Invalid email or password' });
+        // Check if email and password are provided in the request
+        if (!email || !password) {
+            return res.status(400).json({ error: 'Email and password are required' });
         }
 
-        const token = generateToken(user);
+        // Check if user exists in the database
+        const user = await User.findOne({ email });
+        console.log(user)
+        
+        if (!user) {
 
-        res.json({
-            message: 'Login successful',
-            token,
-            user: { id: user._id, name: user.name, role: user.role }
-        });
+            return res.status(400).json({ error: 'Invalid credentials' });
+        }
+          
+        // Compare the provided password with the hashed password stored in DB
+        const hashedPassword = await bcrypt.hash(password, 10);
+        const isMatch = await bcrypt.compare(password, user.password);
+        console.log(hashedPassword,"=====", user.password, "====",isMatch)
+
+        if (!isMatch) {
+            return res.status(400).json({ error: 'Invalid credentials' });
+        }
+
+        // Generate JWT token
+        const token = jwt.sign(
+            { userId: user._id, role: user.role },
+            process.env.JWT_SECRET,
+            { expiresIn: '1h' }
+        );
+
+        // Return success response with token
+        res.status(200).json({ message: 'Login successful', token });
     } catch (error) {
-        handleErrorResponse(res, error, 'Login failed');
+        console.error('Login error:', error);
+        res.status(500).json({ error: 'Login failed', details: error.message });
     }
 };
 
@@ -123,7 +144,7 @@ exports.acceptTrip = async (req, res) => {
             return res.status(404).json({ error: 'Trip not found' });
         }
 
-        const driver = await User.findById(req.user.userId); // Assuming `req.user` is populated by authentication middleware
+        const driver = await User.findById(req.user.userId); 
         if (!driver) {
             return res.status(404).json({ error: 'Driver not found' });
         }
@@ -141,7 +162,7 @@ exports.acceptTrip = async (req, res) => {
         trip.driverId = driver._id;
         await trip.save();
 
-        driver.isOnline = false; // Driver is no longer available after accepting a trip
+        driver.isOnline = false; 
         await driver.save();
 
         res.json({
