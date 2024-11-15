@@ -3,19 +3,37 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Trip = require('../models/Trip');
 
+// Utility function for error handling
+const handleErrorResponse = (res, error, message, statusCode = 500) => {
+    console.error(message, error);
+    res.status(statusCode).json({ error: message, details: error.message });
+};
+
+// Utility function for token generation
+const generateToken = (user) => {
+    return jwt.sign(
+        { userId: user._id, role: user.role },
+        process.env.JWT_SECRET,
+        { expiresIn: '1h' }
+    );
+};
+
 // Register User
 exports.register = async (req, res) => {
     const { name, email, password, role } = req.body;
+
+    if (!name || !email || !password || !role) {
+        return res.status(400).json({ error: 'All fields are required' });
+    }
+
     try {
         const existingUser = await User.findOne({ email });
         if (existingUser) {
             return res.status(400).json({ error: 'User already exists' });
         }
 
-        // Hash password before saving to DB
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Create a new user
         const user = new User({
             name,
             email,
@@ -23,45 +41,52 @@ exports.register = async (req, res) => {
             role
         });
 
-        // Save user to the database
         await user.save();
 
-        res.status(201).json({ message: "User registered successfully" });
+        res.status(201).json({
+            message: 'User registered successfully',
+            user: { id: user._id, name: user.name, email: user.email, role: user.role }
+        });
     } catch (error) {
-        res.status(400).json({ error: "Registration failed", details: error.message });
+        handleErrorResponse(res, error, 'Registration failed');
     }
 };
 
 // Login User
 exports.login = async (req, res) => {
     const { email, password } = req.body;
+
+    if (!email || !password) {
+        return res.status(400).json({ error: 'Email and password are required' });
+    }
+
     try {
         const user = await User.findOne({ email });
         if (!user || !(await bcrypt.compare(password, user.password))) {
-            return res.status(400).json({ error: "Invalid credentials" });
+            return res.status(400).json({ error: 'Invalid email or password' });
         }
 
-        const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        const token = generateToken(user);
 
         res.json({
+            message: 'Login successful',
             token,
-            userId: user._id,
-            role: user.role
+            user: { id: user._id, name: user.name, role: user.role }
         });
     } catch (error) {
-        res.status(400).json({ error: "Login failed", details: error.message });
+        handleErrorResponse(res, error, 'Login failed');
     }
 };
 
 // Toggle Driver Online/Offline Status
 exports.toggleDriverStatus = async (req, res) => {
+    const { driverId } = req.body;
+
+    if (!driverId) {
+        return res.status(400).json({ error: 'Driver ID is required' });
+    }
+
     try {
-        const { driverId } = req.body;
-
-        if (!driverId) {
-            return res.status(400).json({ error: 'Driver ID is required' });
-        }
-
         const driver = await User.findById(driverId);
 
         if (!driver) {
@@ -69,7 +94,7 @@ exports.toggleDriverStatus = async (req, res) => {
         }
 
         if (driver.role !== 'driver') {
-            return res.status(400).json({ error: 'Only drivers can toggle status' });
+            return res.status(403).json({ error: 'Only drivers can toggle status' });
         }
 
         driver.isOnline = !driver.isOnline;
@@ -80,8 +105,7 @@ exports.toggleDriverStatus = async (req, res) => {
             status: driver.isOnline
         });
     } catch (error) {
-        console.error('Error toggling driver status:', error);
-        res.status(500).json({ error: 'Failed to toggle status', details: error.message });
+        handleErrorResponse(res, error, 'Failed to toggle driver status');
     }
 };
 
@@ -89,43 +113,42 @@ exports.toggleDriverStatus = async (req, res) => {
 exports.acceptTrip = async (req, res) => {
     const { tripId } = req.body;
 
+    if (!tripId) {
+        return res.status(400).json({ error: 'Trip ID is required' });
+    }
+
     try {
-        // Find the trip by ID
         const trip = await Trip.findById(tripId);
         if (!trip) {
             return res.status(404).json({ error: 'Trip not found' });
         }
 
-        const driver = await User.findById(trip.driverId);
+        const driver = await User.findById(req.user.userId); // Assuming `req.user` is populated by authentication middleware
         if (!driver) {
             return res.status(404).json({ error: 'Driver not found' });
         }
 
-        // Check if the driver is online
-        if (!driver.isOnline) {
-            return res.status(400).json({ error: 'Driver not available or offline' });
-        }
-
-        // Ensure the driver is eligible to accept the trip
         if (driver.role !== 'driver') {
-            return res.status(400).json({ error: 'Only drivers can accept trips' });
+            return res.status(403).json({ error: 'Only drivers can accept trips' });
         }
 
-        // Update trip status to "accepted"
+        if (!driver.isOnline) {
+            return res.status(400).json({ error: 'Driver is offline and cannot accept trips' });
+        }
+
+        // Update trip and driver details
         trip.status = 'accepted';
+        trip.driverId = driver._id;
         await trip.save();
 
-        // Update driver status (Optional: You can choose if you want to keep the driver online)
-        driver.isOnline = false; // Set driver offline after accepting a trip
+        driver.isOnline = false; // Driver is no longer available after accepting a trip
         await driver.save();
 
-        // Respond with the updated trip info
         res.json({
             message: 'Trip accepted successfully',
             trip
         });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Failed to accept trip', details: error.message });
+        handleErrorResponse(res, error, 'Failed to accept trip');
     }
 };
