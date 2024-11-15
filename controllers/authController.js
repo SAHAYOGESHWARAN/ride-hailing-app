@@ -119,25 +119,21 @@ exports.acceptTrip = async (req, res) => {
             return res.status(404).json({ error: 'Trip not found' });
         }
 
-        console.log('Trip found:', trip);
-
-        // Check if the driver is online (assuming the driver's status is stored in the `isOnline` field)
-        const driver = await User.findById(trip.driverId);  // Assuming driverId is stored in trip
+        // Check if the trip has a valid driverId
+        const driver = await User.findById(trip.driverId);
         if (!driver) {
             return res.status(404).json({ error: 'Driver not found' });
         }
 
-        console.log('Driver found:', driver);
-
-        // Debug the driver status
+        // Log the driver's current status to help debug
         console.log('Driver Status:', driver.isOnline);
-
+        
         // Check if the driver is online
         if (!driver.isOnline) {
             return res.status(400).json({ error: 'Driver not available or offline' });
         }
 
-        // Ensure the driver is eligible to accept the trip (check role)
+        // Ensure the driver is eligible to accept the trip
         if (driver.role !== 'driver') {
             return res.status(400).json({ error: 'Only drivers can accept trips' });
         }
@@ -146,12 +142,10 @@ exports.acceptTrip = async (req, res) => {
         trip.status = 'accepted';
         await trip.save();
 
-        console.log('Trip Status updated to accepted:', trip.status);
-
         // Respond with the updated trip info
         res.json({ message: 'Trip accepted successfully', trip });
     } catch (error) {
-        console.error('Error in accepting trip:', error);
+        console.error(error);
         res.status(500).json({ error: 'Failed to accept trip' });
     }
 };
