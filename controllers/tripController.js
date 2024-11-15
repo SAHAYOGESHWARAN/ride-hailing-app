@@ -39,34 +39,44 @@ exports.requestTrip = async (req, res) => {
 };
 
 // Accept Trip (Driver)
+
 exports.acceptTrip = async (req, res) => {
-    const { driverId, tripId } = req.body;
-
+    const { tripId } = req.body;
     try {
-        // Find driver and ensure they are online
-        const driver = await User.findById(driverId);
-        if (!driver || !driver.isOnline) {
-            return res.status(400).json({ error: 'Driver not available or offline' });
-        }
-
-        // Find and update the trip to accepted status and assign the driver
-        const trip = await Trip.findByIdAndUpdate(
-            tripId,
-            { driver: driverId, status: 'accepted' },
-            { new: true } // Return the updated trip
-        );
-
+        // Find the trip by ID
+        const trip = await Trip.findById(tripId);
         if (!trip) {
             return res.status(404).json({ error: 'Trip not found' });
         }
 
-        res.json({
-            message: 'Trip accepted successfully',
-            trip,
-        });
+        // Check if the trip has a valid driverId
+        const driver = await User.findById(trip.driverId);
+        if (!driver) {
+            return res.status(404).json({ error: 'Driver not found' });
+        }
+
+        // Log the driver's current status to help debug
+        console.log('Driver Status:', driver.isOnline);
+
+        // Check if the driver is online
+        if (!driver.isOnline) {
+            return res.status(400).json({ error: 'Driver not available or offline' });
+        }
+
+        // Ensure the driver is eligible to accept the trip (check role)
+        if (driver.role !== 'driver') {
+            return res.status(400).json({ error: 'Only drivers can accept trips' });
+        }
+
+        // Update trip status to "accepted"
+        trip.status = 'accepted';
+        await trip.save();
+
+        // Respond with the updated trip info
+        res.json({ message: 'Trip accepted successfully', trip });
     } catch (error) {
         console.error(error);
-        res.status(400).json({ error: 'Failed to accept trip' });
+        res.status(500).json({ error: 'Failed to accept trip' });
     }
 };
 
