@@ -1,6 +1,6 @@
-
 const express = require('express');
 const router = express.Router();
+const authenticateToken = require('../middleware/authenticateToken'); 
 const {
     requestTrip,
     acceptTrip,
@@ -12,7 +12,7 @@ const auth = require('../middleware/auth');
 router.post('/request', auth, requestTrip);
 
 // Accept Trip (Driver)
-router.post('/accept', auth, acceptTrip);
+router.post('/accept', authenticateToken, acceptTrip);
 
 // Previous Trips (Rider/Driver)
 router.get('/history/:userId', auth, previousTrips);

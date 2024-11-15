@@ -1,4 +1,4 @@
-const User = require('../models/User');  
+const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const Trip = require('../models/Trip');
@@ -28,7 +28,7 @@ exports.register = async (req, res) => {
 
         res.status(201).json({ message: "User registered successfully" });
     } catch (error) {
-        res.status(400).json({ error: "Registration failed" });
+        res.status(400).json({ error: "Registration failed", details: error.message });
     }
 };
 
@@ -41,7 +41,7 @@ exports.login = async (req, res) => {
             return res.status(400).json({ error: "Invalid credentials" });
         }
 
-        const token = jwt.sign({ userId: user._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+        const token = jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: '1h' });
 
         res.json({
             token,
@@ -49,69 +49,46 @@ exports.login = async (req, res) => {
             role: user.role
         });
     } catch (error) {
-        res.status(400).json({ error: "Login failed" });
+        res.status(400).json({ error: "Login failed", details: error.message });
     }
 };
 
 // Toggle Driver Online/Offline Status
 exports.toggleDriverStatus = async (req, res) => {
     try {
-        // Get the driverId from the body
         const { driverId } = req.body;
 
         if (!driverId) {
             return res.status(400).json({ error: 'Driver ID is required' });
         }
 
-        // Fetch the driver from the database
         const driver = await User.findById(driverId);
 
-        // Check if driver exists
         if (!driver) {
             return res.status(404).json({ error: 'Driver not found' });
         }
 
-        // Ensure the driver is a driver (role check)
         if (driver.role !== 'driver') {
             return res.status(400).json({ error: 'Only drivers can toggle status' });
         }
 
-        // Log the current status
-        console.log('Current Status:', driver.isOnline);
-
-        // Toggle the online/offline status
         driver.isOnline = !driver.isOnline;
-
-        // Log the new toggled status
-        console.log('Toggled Status:', driver.isOnline);
-
-        // Save the driver with the new status
         await driver.save();
 
-        // Return the updated driver status
         res.json({
             message: `Driver is now ${driver.isOnline ? 'online' : 'offline'}`,
             status: driver.isOnline
         });
     } catch (error) {
-        // Log the error for debugging
         console.error('Error toggling driver status:', error);
-
-        // Check for specific error types and provide more detailed responses
-        if (error instanceof TypeError) {
-            return res.status(500).json({ error: 'Unexpected error occurred while processing the request' });
-        } else if (error.name === 'CastError') {
-            return res.status(400).json({ error: 'Invalid driver ID format' });
-        }
-
-        // Default error response
-        res.status(500).json({ error: 'Failed to toggle status' });
+        res.status(500).json({ error: 'Failed to toggle status', details: error.message });
     }
 };
 
 // Accept Trip
 exports.acceptTrip = async (req, res) => {
     const { tripId } = req.body;
+
     try {
         // Find the trip by ID
         const trip = await Trip.findById(tripId);
@@ -119,15 +96,11 @@ exports.acceptTrip = async (req, res) => {
             return res.status(404).json({ error: 'Trip not found' });
         }
 
-        // Check if the trip has a valid driverId
         const driver = await User.findById(trip.driverId);
         if (!driver) {
             return res.status(404).json({ error: 'Driver not found' });
         }
 
-        // Log the driver's current status to help debug
-        console.log('Driver Status:', driver.isOnline);
-        
         // Check if the driver is online
         if (!driver.isOnline) {
             return res.status(400).json({ error: 'Driver not available or offline' });
@@ -142,10 +115,17 @@ exports.acceptTrip = async (req, res) => {
         trip.status = 'accepted';
         await trip.save();
 
+        // Update driver status (Optional: You can choose if you want to keep the driver online)
+        driver.isOnline = false; // Set driver offline after accepting a trip
+        await driver.save();
+
         // Respond with the updated trip info
-        res.json({ message: 'Trip accepted successfully', trip });
+        res.json({
+            message: 'Trip accepted successfully',
+            trip
+        });
     } catch (error) {
         console.error(error);
-        res.status(500).json({ error: 'Failed to accept trip' });
+        res.status(500).json({ error: 'Failed to accept trip', details: error.message });
     }
 };
