@@ -88,7 +88,7 @@ exports.login = async (req, res) => {
         const token = jwt.sign(
             { userId: user._id, role: user.role },
             process.env.JWT_SECRET,
-            { expiresIn: '1h' }
+            { expiresIn: '24h' }
         );
 
         // Return success response with token
@@ -124,7 +124,7 @@ exports.toggleDriverStatus = async (req, res) => {
         );
 
         res.json({
-            message: `Driver is now ${driver.isOnline ? 'online' : 'offline'}`,
+            message: `Driver is now ${updatedDriver.isOnline ? 'online' : 'offline'}`,
             status: updatedDriver.isOnline
         });
     } catch (error) {
