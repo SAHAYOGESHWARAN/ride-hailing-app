@@ -53,7 +53,8 @@ connectDB();
 // Route middlewares
 app.use('/api/auth', authRoutes);
 app.use('/api/fare', fareRoutes);
-app.use('/api/trip', tripRoutes);  // Routes for trip management
+app.use('/api/trip', tripRoutes); 
+app.use('/api/trips',tripRoutes);
 app.use('/api', someRouteFile);
 
 // Serve static files in production (if applicable)
