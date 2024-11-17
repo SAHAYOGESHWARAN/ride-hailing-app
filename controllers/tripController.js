@@ -58,8 +58,8 @@ exports.createTrip = async (req, res) => {
 // Request Trip (Rider)
 exports.requestTrip = async (req, res) => {
     try {
-        const { origin, destination, fare } = req.body;
-        const riderId = req.user?.id; 
+        const { origin, destination, fare, rider } = req.body;
+        const riderId = rider; 
         console.log("riderId:dfghu", riderId);
 
         if (!riderId) {
