@@ -56,25 +56,53 @@ exports.createTrip = async (req, res) => {
 // Request Trip (Rider)
 exports.requestTrip = async (req, res) => {
     const { origin, destination, fare } = req.body;
-    const riderId = req.user.id; 
+    const riderId = req.user?.id; // Assuming `req.user` contains authenticated user info
 
     try {
-        // Validate input
-        if (!origin || !destination || !fare || fare <= 0) {
-            return res.status(400).json({ error: 'Valid origin, destination, and fare are required' });
+        // Validate required fields
+        if (!origin || !origin.lat || !origin.lon) {
+            return res.status(400).json({
+                errors: [
+                    { 
+                        type: 'field',
+                        value: origin,
+                        msg: 'Valid origin (lat and lon) is required',
+                        path: 'origin',
+                        location: 'body',
+                    },
+                ],
+            });
         }
 
-        // Validate origin and destination coordinates
-        if (
-            typeof origin.lat !== 'number' ||
-            typeof origin.lon !== 'number' ||
-            typeof destination.lat !== 'number' ||
-            typeof destination.lon !== 'number'
-        ) {
-            return res.status(400).json({ error: 'Origin and destination must have valid lat and lon values' });
+        if (!destination || !destination.lat || !destination.lon) {
+            return res.status(400).json({
+                errors: [
+                    {
+                        type: 'field',
+                        value: destination,
+                        msg: 'Valid destination (lat and lon) is required',
+                        path: 'destination',
+                        location: 'body',
+                    },
+                ],
+            });
         }
 
-        // Calculate distance
+        if (!fare || fare <= 0) {
+            return res.status(400).json({
+                errors: [
+                    {
+                        type: 'field',
+                        value: fare,
+                        msg: 'A valid fare greater than 0 is required',
+                        path: 'fare',
+                        location: 'body',
+                    },
+                ],
+            });
+        }
+
+        // Calculate distance using coordinates
         const distance = calculateDistance(
             origin.lat,
             origin.lon,
@@ -82,29 +110,30 @@ exports.requestTrip = async (req, res) => {
             destination.lon
         );
 
-        // Create a new trip
+        // Create new trip
         const newTrip = new Trip({
             rider: riderId,
             origin,
             destination,
+            originCoordinates: { type: 'Point', coordinates: [origin.lon, origin.lat] },
+            destinationCoordinates: { type: 'Point', coordinates: [destination.lon, destination.lat] },
             distance,
             fare,
             status: 'requested',
-            requestedAt: new Date(),
         });
 
+        // Save to database
         await newTrip.save();
 
-        res.status(201).json({
+        return res.status(201).json({
             message: 'Trip requested successfully',
             trip: newTrip,
         });
     } catch (error) {
-        console.error('Error requesting trip:', error);
-        res.status(500).json({ error: 'Failed to request trip', details: error.message });
+        console.error('Error requesting trip:', error.message);
+        return res.status(500).json({ error: 'Failed to request trip', details: error.message });
     }
 };
-
 // Accept Trip (Driver)
 exports.acceptTrip = async (req, res) => {
     const { tripId } = req.body;
