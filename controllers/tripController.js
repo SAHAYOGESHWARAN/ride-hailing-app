@@ -1,22 +1,23 @@
 const Trip = require('../models/Trip');
 const User = require('../models/User');
+const { calculateDistance } = require('../utils/distanceUtils');
 
-// Utility to calculate distance between two coordinates (Haversine formula)
-const calculateDistance = (lat1, lon1, lat2, lon2) => {
-    const toRadians = (degree) => (degree * Math.PI) / 180;
-    const R = 6371; // Earth's radius in kilometers
+// // Utility to calculate distance between two coordinates (Haversine formula)
+// const calculateDistance = (lat1, lon1, lat2, lon2) => {
+//     const toRadians = (degree) => (degree * Math.PI) / 180;
+//     const R = 6371; // Earth's radius in kilometers
 
-    const dLat = toRadians(lat2 - lat1);
-    const dLon = toRadians(lon2 - lon1);
+//     const dLat = toRadians(lat2 - lat1);
+//     const dLon = toRadians(lon2 - lon1);
 
-    const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
-        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+//     const a =
+//         Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+//         Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
+//         Math.sin(dLon / 2) * Math.sin(dLon / 2);
 
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c; // Distance in kilometers
-};
+//     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+//     return R * c; // Distance in kilometers
+// };
 
 // Create Trip with automatic distance calculation
 exports.createTrip = async (req, res) => {
@@ -38,7 +39,7 @@ exports.createTrip = async (req, res) => {
             destination,
             fare,
             distance,
-            rider: req.user.id,  // Assuming user ID is added to the request via authentication middleware
+            rider: req.user.id, 
         });
 
         await trip.save();
@@ -55,54 +56,22 @@ exports.createTrip = async (req, res) => {
 
 // Request Trip (Rider)
 exports.requestTrip = async (req, res) => {
-    const { origin, destination, fare } = req.body;
-    const riderId = req.user?.id; // Assuming `req.user` contains authenticated user info
-
     try {
-        // Validate required fields
+        const { origin, destination, fare } = req.body;
+        const riderId = req.user?.id; // Assume authentication middleware sets `req.user`
+
+        // Validate input
         if (!origin || !origin.lat || !origin.lon) {
-            return res.status(400).json({
-                errors: [
-                    { 
-                        type: 'field',
-                        value: origin,
-                        msg: 'Valid origin (lat and lon) is required',
-                        path: 'origin',
-                        location: 'body',
-                    },
-                ],
-            });
+            return res.status(400).json({ error: 'Origin (with lat and lon) is required.' });
         }
-
         if (!destination || !destination.lat || !destination.lon) {
-            return res.status(400).json({
-                errors: [
-                    {
-                        type: 'field',
-                        value: destination,
-                        msg: 'Valid destination (lat and lon) is required',
-                        path: 'destination',
-                        location: 'body',
-                    },
-                ],
-            });
+            return res.status(400).json({ error: 'Destination (with lat and lon) is required.' });
         }
-
         if (!fare || fare <= 0) {
-            return res.status(400).json({
-                errors: [
-                    {
-                        type: 'field',
-                        value: fare,
-                        msg: 'A valid fare greater than 0 is required',
-                        path: 'fare',
-                        location: 'body',
-                    },
-                ],
-            });
+            return res.status(400).json({ error: 'Fare must be a positive number.' });
         }
 
-        // Calculate distance using coordinates
+        // Calculate distance
         const distance = calculateDistance(
             origin.lat,
             origin.lon,
@@ -110,30 +79,30 @@ exports.requestTrip = async (req, res) => {
             destination.lon
         );
 
-        // Create new trip
+        // Create a new trip
         const newTrip = new Trip({
             rider: riderId,
-            origin,
-            destination,
-            originCoordinates: { type: 'Point', coordinates: [origin.lon, origin.lat] },
-            destinationCoordinates: { type: 'Point', coordinates: [destination.lon, destination.lat] },
+            origin: { lat: origin.lat, lon: origin.lon },
+            destination: { lat: destination.lat, lon: destination.lon },
             distance,
             fare,
             status: 'requested',
+            requestedAt: new Date(),
         });
 
-        // Save to database
         await newTrip.save();
 
-        return res.status(201).json({
+        res.status(201).json({
             message: 'Trip requested successfully',
             trip: newTrip,
         });
     } catch (error) {
-        console.error('Error requesting trip:', error.message);
-        return res.status(500).json({ error: 'Failed to request trip', details: error.message });
+        console.error('Error requesting trip:', error);
+        res.status(500).json({ error: 'Failed to request trip', details: error.message });
     }
 };
+
+
 // Accept Trip (Driver)
 exports.acceptTrip = async (req, res) => {
     const { tripId } = req.body;
