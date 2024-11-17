@@ -3,7 +3,7 @@ const { body, validationResult } = require('express-validator');
 const rateLimit = require('express-rate-limit');
 const { createTrip, requestTrip, acceptTrip, previousTrips } = require('../controllers/tripController');
 const authenticateToken = require('../middleware/authenticateToken');
-const auth = require('../middleware/auth'); 
+const auth = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -17,7 +17,7 @@ const rateLimiter = rateLimit({
 // Role-based access control (RBAC) middleware
 const authorizeRoles = (roles) => {
     return (req, res, next) => {
-        const userRole = req.user?.role; // Get the user's role from the decoded token
+        const userRole = req.user?.role; 
 
         if (!roles.includes(userRole)) {
             return res.status(403).json({ error: 'You do not have permission to access this route.' });
@@ -30,13 +30,13 @@ const authorizeRoles = (roles) => {
 // Input validation and rate limiting
 router.post(
     '/request',
-    auth, 
-    rateLimiter, 
+    auth, // Ensure the user is authenticated
+    rateLimiter, // Apply rate limiting
     [
         // Validate the input data
-        body('origin', 'Origin is required').notEmpty().isString(),
-        body('destination', 'Destination is required').notEmpty().isString(),
-        body('fare', 'Fare must be a number').isNumeric().notEmpty(),
+       body('origin', 'Origin is required').notEmpty().isObject(),
+       body('destination', 'Destination is required').notEmpty().isObject(),
+        body('fare', 'Fare must be a valid number').isNumeric().notEmpty(),
     ],
     (req, res, next) => {
         // Check for validation errors
@@ -62,16 +62,15 @@ router.post(
         if (!errors.isEmpty()) {
             return res.status(400).json({ errors: errors.array() });
         }
-        next();
+        next(); 
     },
-    authorizeRoles(['driver']), 
-    acceptTrip 
+    authorizeRoles(['driver']),
 );
 
 // Previous Trips (Rider/Driver) - Protected by auth middleware
-router.get('/history/:userId', auth, previousTrips); 
+router.get('/history/:userId', auth, previousTrips);
 
 // POST route to create a trip
-router.post('/create', createTrip); 
+router.post('/create', createTrip);
 
-module.exports = router;  
+module.exports = router;

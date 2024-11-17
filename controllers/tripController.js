@@ -35,6 +35,7 @@ exports.createTrip = async (req, res) => {
         );
 
         const trip = new Trip({
+           
             origin,
             destination,
             fare,
@@ -58,9 +59,14 @@ exports.createTrip = async (req, res) => {
 exports.requestTrip = async (req, res) => {
     try {
         const { origin, destination, fare } = req.body;
-        const riderId = req.user?.id; // Assume authentication middleware sets `req.user`
+        const riderId = req.user?.id; 
+        console.log("riderId:dfghu", riderId);
 
-        // Validate input
+        if (!riderId) {
+            return res.status(400).json({ error: 'Rider ID is missing from user data.' });
+        }
+
+        // Validate input data
         if (!origin || !origin.lat || !origin.lon) {
             return res.status(400).json({ error: 'Origin (with lat and lon) is required.' });
         }
@@ -71,7 +77,7 @@ exports.requestTrip = async (req, res) => {
             return res.status(400).json({ error: 'Fare must be a positive number.' });
         }
 
-        // Calculate distance
+        // Calculate distance (Ensure the `calculateDistance` function is working properly)
         const distance = calculateDistance(
             origin.lat,
             origin.lon,
@@ -79,9 +85,9 @@ exports.requestTrip = async (req, res) => {
             destination.lon
         );
 
-        // Create a new trip
+        // Create a new trip and save it
         const newTrip = new Trip({
-            rider: riderId,
+            rider: riderId, 
             origin: { lat: origin.lat, lon: origin.lon },
             destination: { lat: destination.lat, lon: destination.lon },
             distance,
