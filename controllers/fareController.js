@@ -1,5 +1,5 @@
 const Fare = require('../models/Fare');
-const { calculateDistance } = require('../utils/distanceUtils');
+const { calculateDistance } = require('../utils/distanceUtils'); // Haversine formula utility
 
 // Check Fare Details
 exports.checkFare = async (req, res) => {

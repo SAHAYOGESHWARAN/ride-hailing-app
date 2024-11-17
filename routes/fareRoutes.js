@@ -1,38 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { checkFare, calculateFare } = require('../controllers/fareController');
-const { body, validationResult } = require('express-validator'); 
+const fareController = require('../controllers/fareController');
 
-// Route to check fare details
-router.get('/check-fare', async (req, res, next) => {
-    try {
-        await checkFare(req, res);
-    } catch (err) {
-        next(err); 
-    }
-});
+// Check Fare Details
+router.get('/check-fare', fareController.checkFare);
 
-// Route to calculate fare based on origin and destination
-// router.post(
-//     '/calculate',
-//     fareLimiter, 
-//     [
-//         // Input validation for calculateFare
-//         body('origin', 'Origin is required and must be a string').notEmpty().isString(),
-//         body('destination', 'Destination is required and must be a string').notEmpty().isString(),
-//     ],
-//     async (req, res, next) => {
-//         // Check for validation errors
-//         const errors = validationResult(req);
-//         if (!errors.isEmpty()) {
-//             return res.status(400).json({ errors: errors.array() });
-//         }
-//         try {
-//             await calculateFare(req, res);
-//         } catch (err) {
-//             next(err); 
-//         }
-//     }
-// );
+// Calculate Fare based on origin and destination
+router.post('/calculate-fare', fareController.calculateFare);
 
 module.exports = router;
