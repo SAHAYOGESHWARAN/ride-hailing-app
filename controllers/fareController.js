@@ -1,5 +1,7 @@
 const Fare = require('../models/Fare');
 const axios = require('axios'); 
+const { calculateDistance } = require('../utils/distanceUtils');
+
 
 // Check Fare Details
 exports.checkFare = async (req, res) => {
@@ -24,45 +26,51 @@ exports.checkFare = async (req, res) => {
     }
 };
 
-// Calculate Fare based on origin and destination
-exports.calculateFare = async (req, res) => {
-    const { origin, destination } = req.body;
-
-    if (!origin || !destination) {
-        return res.status(400).json({ error: 'Origin and destination are required' });
-    }
-
-    try {
-        // Fetch base rate and fare data from the database
-        const fareData = await Fare.findOne();
-
-        if (!fareData) {
-            return res.status(404).json({ error: 'Fare details not configured' });
+// Calculate Fare based on origin and destinationexports.calculateFare = async (req, res) => {
+    exports.calculateFare = async (req, res) => {
+        const { origin, destination } = req.body;
+    
+        // Validate that origin and destination are provided
+        if (!origin || !destination) {
+            return res.status(400).json({ error: 'Origin and destination are required' });
         }
-
-        const { baseFare, ratePerKm } = fareData;
-
-        // Calculate distance using external API (e.g., Google Maps API)
-        const distance = await getDistanceFromCoordinates(origin, destination);
-
-        if (distance < 0) {
-            return res.status(400).json({ error: 'Unable to calculate distance' });
+    
+        // Validate that the origin and destination coordinates are valid arrays with [lat, lon]
+        if (!Array.isArray(origin) || origin.length !== 2 || !Array.isArray(destination) || destination.length !== 2) {
+            return res.status(400).json({ error: 'Origin and destination must be arrays of [lat, lon]' });
         }
-
-        // Calculate fare
-        const fare = baseFare + (distance * ratePerKm);
-
-        res.json({
-            origin,
-            destination,
-            distance: `${distance.toFixed(2)} km`,
-            fare: `${fare.toFixed(2)} ${fareData.currency || 'USD'}`
-        });
-    } catch (error) {
-        console.error('Error calculating fare:', error);
-        res.status(500).json({ error: 'Failed to calculate fare', details: error.message });
-    }
-};
+    
+        try {
+            // Calculate the distance between origin and destination
+            const distance = calculateDistance(origin[0], origin[1], destination[0], destination[1]);
+    
+            // Initialize fare variable
+            let fare;
+    
+            // Calculate fare based on distance
+            if (distance >= 1 && distance <= 5) {
+                fare = 100;
+            } else if (distance > 5 && distance <= 10) {
+                fare = 200;
+            } else if (distance > 10 && distance <= 20) {
+                fare = 300;
+            } else if (distance > 20 && distance <= 30) {
+                fare = 400;
+            } else {
+                fare = 1000;
+            }
+    
+            res.json({
+                message: 'Fare calculated successfully',
+                fare,
+                distance
+            });
+        } catch (error) {
+            console.error('Error calculating fare:', error);
+            res.status(500).json({ error: 'Failed to calculate fare', details: error.message });
+        }
+    };
+     
 
 // Helper function to calculate distance between coordinates using an API
 async function getDistanceFromCoordinates(origin, destination) {
