@@ -1,6 +1,55 @@
 const Trip = require('../models/Trip');
 const User = require('../models/User');
 
+// Utility to calculate distance between two coordinates
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const toRadians = (degree) => (degree * Math.PI) / 180;
+    const R = 6371; // Earth's radius in kilometers
+
+    const dLat = toRadians(lat2 - lat1);
+    const dLon = toRadians(lon2 - lon1);
+
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // Distance in kilometers
+};
+
+// Create Trip with automatic distance calculation
+exports.createTrip = async (req, res) => {
+    const { origin, destination } = req.body;
+
+    if (!origin || !destination) {
+        return res.status(400).json({ error: 'Origin and destination are required' });
+    }
+
+    try {
+        const distance = calculateDistance(
+            origin.lat, origin.lon,
+            destination.lat, destination.lon
+        );
+
+        const trip = new Trip({
+            origin,
+            destination,
+            distance
+        });
+
+        await trip.save();
+
+        res.status(201).json({
+            message: 'Trip created successfully',
+            trip
+        });
+    } catch (error) {
+        console.error('Error creating trip:', error);
+        res.status(500).json({ error: 'Failed to create trip', details: error.message });
+    }
+};
+
 // Request Trip (Rider)
 exports.requestTrip = async (req, res) => {
     const { origin, destination, fare } = req.body;
@@ -8,38 +57,31 @@ exports.requestTrip = async (req, res) => {
 
     try {
         // Validate input
-        if (!origin || !destination) {
-            return res.status(400).json({ error: 'Origin and destination are required' });
+        if (!origin || !destination || !fare || fare <= 0) {
+            return res.status(400).json({ error: 'Valid origin, destination, and fare are required' });
         }
 
-        // Validate fare
-        if (!fare || fare <= 0) {
-            return res.status(400).json({ error: 'Valid fare is required' });
-        }
+        // Calculate distance
+        const distance = calculateDistance(
+            origin.coordinates[1], origin.coordinates[0],
+            destination.coordinates[1], destination.coordinates[0]
+        );
 
-        // Create a new trip
         const newTrip = new Trip({
             rider: riderId,
             origin,
             destination,
+            distance,
             fare,
-            status: 'requested', // Initial status
-            createdAt: new Date()
+            status: 'requested',
+            requestedAt: new Date()
         });
 
         await newTrip.save();
 
         res.status(201).json({
             message: 'Trip requested successfully',
-            trip: {
-                id: newTrip._id,
-                rider: newTrip.rider,
-                origin: newTrip.origin,
-                destination: newTrip.destination,
-                fare: newTrip.fare,
-                status: newTrip.status,
-                createdAt: newTrip.createdAt
-            }
+            trip: newTrip
         });
     } catch (error) {
         console.error('Error requesting trip:', error);
@@ -50,57 +92,35 @@ exports.requestTrip = async (req, res) => {
 // Accept Trip (Driver)
 exports.acceptTrip = async (req, res) => {
     const { tripId } = req.body;
-    const driverId = req.user.id; // Get driver ID from the authenticated user
+    const driverId = req.user.id;
 
     try {
-        // Validate input
         if (!tripId) {
             return res.status(400).json({ error: 'Trip ID is required' });
         }
 
-        // Find the trip
-        const trip = await Trip.findById(tripId).populate('rider', 'name email'); // Populate rider details
+        const trip = await Trip.findById(tripId).populate('rider', 'name email');
         if (!trip) {
             return res.status(404).json({ error: 'Trip not found' });
         }
 
-        // Ensure the trip is in "requested" status
         if (trip.status !== 'requested') {
             return res.status(400).json({ error: `Trip is already ${trip.status}` });
         }
 
-        // Ensure the driver is valid and online
         const driver = await User.findById(driverId);
-        if (!driver) {
-            return res.status(404).json({ error: 'Driver not found' });
+        if (!driver || !driver.isOnline || driver.role !== 'driver') {
+            return res.status(403).json({ error: 'Invalid driver or driver is offline' });
         }
 
-        if (!driver.isOnline) {
-            return res.status(400).json({ error: 'Driver is offline' });
-        }
-
-        if (driver.role !== 'driver') {
-            return res.status(403).json({ error: 'Only drivers can accept trips' });
-        }
-
-        // Assign the driver to the trip and update its status
         trip.status = 'accepted';
-        trip.driver = driverId; // Link the driver
-        trip.updatedAt = new Date(); // Update timestamp
+        trip.driver = driverId;
+        trip.updatedAt = new Date();
         await trip.save();
 
         res.json({
             message: 'Trip accepted successfully',
-            trip: {
-                id: trip._id,
-                rider: trip.rider,
-                origin: trip.origin,
-                destination: trip.destination,
-                fare: trip.fare,
-                status: trip.status,
-                driver: { id: driver._id, name: driver.name, email: driver.email },
-                updatedAt: trip.updatedAt
-            }
+            trip
         });
     } catch (error) {
         console.error('Error accepting trip:', error);
@@ -108,41 +128,29 @@ exports.acceptTrip = async (req, res) => {
     }
 };
 
-// Previous Trips (Rider/Driver)
+// Retrieve Previous Trips (Rider/Driver)
 exports.previousTrips = async (req, res) => {
     const { userId } = req.params;
 
     try {
-        // Validate input
         if (!userId) {
             return res.status(400).json({ error: 'User ID is required' });
         }
 
-        // Find trips for the user (either as rider or driver), sorted by the latest
         const trips = await Trip.find({
             $or: [{ rider: userId }, { driver: userId }]
         })
-            .populate('rider', 'name email') // Populate rider details
-            .populate('driver', 'name email') // Populate driver details
-            .sort({ updatedAt: -1 }); // Sort by latest update
+            .populate('rider', 'name email')
+            .populate('driver', 'name email')
+            .sort({ updatedAt: -1 });
 
-        if (!trips || trips.length === 0) {
+        if (!trips.length) {
             return res.status(404).json({ message: 'No previous trips found' });
         }
 
         res.json({
             message: 'Previous trips retrieved successfully',
-            trips: trips.map((trip) => ({
-                id: trip._id,
-                origin: trip.origin,
-                destination: trip.destination,
-                fare: trip.fare,
-                status: trip.status,
-                rider: trip.rider ? { id: trip.rider._id, name: trip.rider.name } : null,
-                driver: trip.driver ? { id: trip.driver._id, name: trip.driver.name } : null,
-                createdAt: trip.createdAt,
-                updatedAt: trip.updatedAt
-            }))
+            trips
         });
     } catch (error) {
         console.error('Error retrieving previous trips:', error);

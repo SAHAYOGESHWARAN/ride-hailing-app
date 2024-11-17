@@ -3,28 +3,35 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const cors = require('cors');
 const morgan = require('morgan');
-const helmet = require('helmet');  
-const rateLimit = require('express-rate-limit');  
-const path = require('path');  
+const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const path = require('path');
 
-
+// Load environment variables from .env file
 dotenv.config();
 
+// Import routes
+const tripRoutes = require('./routes/tripRoutes');
+const authRoutes = require('./routes/authRoutes');
+const fareRoutes = require('./routes/fareRoutes');
+const someRouteFile = require('./routes/someRouteFile');
+
+// Initialize the express application
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Middleware Setup
-app.use(helmet()); 
-app.use(express.json()); 
-app.use(cors({
+app.use(helmet());  // Security headers
+app.use(express.json());  // Parse JSON bodies
+app.use(cors({  // Cross-origin resource sharing configuration
     origin: process.env.CORS_ORIGIN || '*',
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-})); 
-app.use(morgan('dev')); 
-app.use(rateLimit({ 
-    windowMs: 15 * 60 * 1000,
-    max: 100, 
+}));
+app.use(morgan('dev'));  // HTTP request logging
+app.use(rateLimit({  // Rate limiting to prevent abuse
+    windowMs: 15 * 60 * 1000,  // 15 minutes
+    max: 100,  // limit each IP to 100 requests per window
     message: 'Too many requests from this IP, please try again later.',
 }));
 
@@ -38,21 +45,15 @@ const connectDB = async () => {
         console.log('MongoDB connected successfully');
     } catch (error) {
         console.error('MongoDB connection error:', error);
-        process.exit(1); 
+        process.exit(1);  // Exit the process with failure if DB connection fails
     }
 };
 connectDB();
 
-// Import routes
-const authRoutes = require('./routes/authRoutes');
-const fareRoutes = require('./routes/fareRoutes');
-const tripRoutes = require('./routes/tripRoutes');
-const someRouteFile = require('./routes/someRouteFile');
-
 // Route middlewares
 app.use('/api/auth', authRoutes);
 app.use('/api/fare', fareRoutes);
-app.use('/api/trip', tripRoutes);
+app.use('/api/trip', tripRoutes);  // Routes for trip management
 app.use('/api', someRouteFile);
 
 // Serve static files in production (if applicable)
@@ -64,7 +65,7 @@ if (process.env.NODE_ENV === 'production') {
     });
 }
 
-// Error handling middleware (Global error handler)
+// Global error handling middleware
 app.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(err.status || 500).json({

@@ -1,7 +1,7 @@
 const express = require('express');
 const { body, validationResult } = require('express-validator');
 const rateLimit = require('express-rate-limit');
-const { requestTrip, acceptTrip, previousTrips } = require('../controllers/tripController');
+const { createTrip, requestTrip, acceptTrip, previousTrips } = require('../controllers/tripController');
 const authenticateToken = require('../middleware/authenticateToken');
 const auth = require('../middleware/auth'); 
 
@@ -17,7 +17,7 @@ const rateLimiter = rateLimit({
 // Role-based access control (RBAC) middleware
 const authorizeRoles = (roles) => {
     return (req, res, next) => {
-        const userRole = req.user?.role; 
+        const userRole = req.user?.role; // Get the user's role from the decoded token
 
         if (!roles.includes(userRole)) {
             return res.status(403).json({ error: 'You do not have permission to access this route.' });
@@ -58,7 +58,6 @@ router.post(
         body('tripId', 'Trip ID is required').notEmpty().isMongoId(),
     ],
     (req, res, next) => {
-     
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             return res.status(400).json({ errors: errors.array() });
@@ -72,4 +71,7 @@ router.post(
 // Previous Trips (Rider/Driver) - Protected by auth middleware
 router.get('/history/:userId', auth, previousTrips); 
 
-module.exports = router;
+// POST route to create a trip
+router.post('/create', createTrip); 
+
+module.exports = router;  
