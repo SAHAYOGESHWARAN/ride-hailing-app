@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 
 // Define the Trip schema
-const TripSchema = new mongoose.Schema(
+const tripSchema = new mongoose.Schema(
     {
         rider: {
             type: mongoose.Schema.Types.ObjectId,
@@ -14,33 +14,34 @@ const TripSchema = new mongoose.Schema(
             default: null,
         },
         origin: {
-            type: [Number], // [lat, lon] - The origin location as an array of numbers
-            required: true,
+            lat: { type: Number, required: true },
+            lon: { type: Number, required: true },
         },
         destination: {
-            type: [Number], // [lat, lon] - The destination location as an array of numbers
-            required: true,
+            lat: { type: Number, required: true },
+            lon: { type: Number, required: true },
         },
         originCoordinates: {
             type: { type: String, enum: ['Point'], default: 'Point' },
-            coordinates: { type: [Number], required: true }, // Geospatial coordinates [longitude, latitude]
+            coordinates: { type: [Number], required: true }, 
         },
         destinationCoordinates: {
             type: { type: String, enum: ['Point'], default: 'Point' },
-            coordinates: { type: [Number], required: true }, // Geospatial coordinates [longitude, latitude]
+            coordinates: { type: [Number], required: true }, 
         },
         distance: {
             type: Number,
-            required: true, // Pre-computed or calculated distance in kilometers
+            required: true,
+            min: 0, 
         },
         fare: {
             type: Number,
             required: true,
-            min: 0, // Ensures no negative fares
+            min: 0, 
         },
         status: {
             type: String,
-            enum: ['requested', 'accepted', 'completed', 'cancelled'],
+            enum: ['requested', 'accepted', 'in-progress', 'completed', 'cancelled'],
             default: 'requested',
         },
         paymentStatus: {
@@ -50,31 +51,31 @@ const TripSchema = new mongoose.Schema(
         },
         requestedAt: {
             type: Date,
-            default: Date.now, // Timestamp for when the trip was requested
+            default: Date.now,
         },
         completedAt: {
             type: Date,
-            default: null, // Timestamp for when the trip is completed
+            default: null, 
         },
         createdAt: {
             type: Date,
-            default: Date.now, // Explicit timestamp for trip creation
+            default: Date.now, 
         },
     },
-    { timestamps: true } // Adds createdAt and updatedAt fields automatically
+    { timestamps: true } 
 );
 
 // Define 2dsphere indexes for geospatial queries
-TripSchema.index({ originCoordinates: '2dsphere' });
-TripSchema.index({ destinationCoordinates: '2dsphere' });
+tripSchema.index({ originCoordinates: '2dsphere' });
+tripSchema.index({ destinationCoordinates: '2dsphere' });
 
 // Static method to calculate fare
-TripSchema.statics.calculateFare = function (distance, ratePerKm, baseFare = 0) {
+tripSchema.statics.calculateFare = function (distance, ratePerKm, baseFare = 0) {
     return parseFloat((distance * ratePerKm + baseFare).toFixed(2)); // Round to 2 decimal places
 };
 
-// Middleware for validation before saving
-TripSchema.pre('save', function (next) {
+// Middleware to validate fields before saving
+tripSchema.pre('save', function (next) {
     if (!this.originCoordinates || !this.destinationCoordinates) {
         return next(new Error('Both originCoordinates and destinationCoordinates are required.'));
     }
@@ -87,11 +88,22 @@ TripSchema.pre('save', function (next) {
 });
 
 // Virtual field to calculate trip duration (in minutes)
-TripSchema.virtual('tripDuration').get(function () {
+tripSchema.virtual('tripDuration').get(function () {
     if (this.status === 'completed' && this.completedAt) {
         return Math.round((this.completedAt - this.requestedAt) / 1000 / 60); // Duration in minutes
     }
     return null;
 });
 
-module.exports = mongoose.model('Trip', TripSchema);
+// Populate `originCoordinates` and `destinationCoordinates` automatically
+tripSchema.pre('validate', function (next) {
+    if (this.origin) {
+        this.originCoordinates = { type: 'Point', coordinates: [this.origin.lon, this.origin.lat] };
+    }
+    if (this.destination) {
+        this.destinationCoordinates = { type: 'Point', coordinates: [this.destination.lon, this.destination.lat] };
+    }
+    next();
+});
+
+module.exports = mongoose.model('Trip', tripSchema);

@@ -56,7 +56,7 @@ exports.createTrip = async (req, res) => {
 // Request Trip (Rider)
 exports.requestTrip = async (req, res) => {
     const { origin, destination, fare } = req.body;
-    const riderId = req.user.id;
+    const riderId = req.user.id; 
 
     try {
         // Validate input
@@ -64,17 +64,25 @@ exports.requestTrip = async (req, res) => {
             return res.status(400).json({ error: 'Valid origin, destination, and fare are required' });
         }
 
-        // Check if origin and destination have coordinates
-        if (!origin.coordinates || !destination.coordinates) {
-            return res.status(400).json({ error: 'Both origin and destination must have coordinates' });
+        // Validate origin and destination coordinates
+        if (
+            typeof origin.lat !== 'number' ||
+            typeof origin.lon !== 'number' ||
+            typeof destination.lat !== 'number' ||
+            typeof destination.lon !== 'number'
+        ) {
+            return res.status(400).json({ error: 'Origin and destination must have valid lat and lon values' });
         }
 
-        // Calculate distance assuming origin and destination coordinates are arrays of [lat, lon]
+        // Calculate distance
         const distance = calculateDistance(
-            origin.coordinates[0], origin.coordinates[1], // origin coordinates: [lat, lon]
-            destination.coordinates[0], destination.coordinates[1] // destination coordinates: [lat, lon]
+            origin.lat,
+            origin.lon,
+            destination.lat,
+            destination.lon
         );
 
+        // Create a new trip
         const newTrip = new Trip({
             rider: riderId,
             origin,
@@ -82,14 +90,14 @@ exports.requestTrip = async (req, res) => {
             distance,
             fare,
             status: 'requested',
-            requestedAt: new Date()
+            requestedAt: new Date(),
         });
 
         await newTrip.save();
 
         res.status(201).json({
             message: 'Trip requested successfully',
-            trip: newTrip
+            trip: newTrip,
         });
     } catch (error) {
         console.error('Error requesting trip:', error);
