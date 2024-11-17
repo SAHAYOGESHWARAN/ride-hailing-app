@@ -11,25 +11,23 @@ const TripSchema = new mongoose.Schema(
         driver: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'User',
-            default: null, 
+            default: null,
         },
         origin: {
-            type: String,
+            type: [Number], // [lat, lon] - The origin location as an array of numbers
             required: true,
-            trim: true,
         },
         destination: {
-            type: String,
+            type: [Number], // [lat, lon] - The destination location as an array of numbers
             required: true,
-            trim: true,
         },
         originCoordinates: {
             type: { type: String, enum: ['Point'], default: 'Point' },
-            coordinates: { type: [Number], required: true }, // [longitude, latitude]
+            coordinates: { type: [Number], required: true }, // Geospatial coordinates [longitude, latitude]
         },
         destinationCoordinates: {
             type: { type: String, enum: ['Point'], default: 'Point' },
-            coordinates: { type: [Number], required: true }, // [longitude, latitude]
+            coordinates: { type: [Number], required: true }, // Geospatial coordinates [longitude, latitude]
         },
         distance: {
             type: Number,
@@ -48,7 +46,7 @@ const TripSchema = new mongoose.Schema(
         paymentStatus: {
             type: String,
             enum: ['pending', 'completed', 'failed'],
-            default: 'pending', 
+            default: 'pending',
         },
         requestedAt: {
             type: Date,

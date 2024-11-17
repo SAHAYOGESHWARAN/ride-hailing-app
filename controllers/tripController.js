@@ -1,25 +1,44 @@
 const Trip = require('../models/Trip');
 const User = require('../models/User');
-const { calculateDistance } = require('../utils/distanceUtils'); 
+
+// Utility to calculate distance between two coordinates (Haversine formula)
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const toRadians = (degree) => (degree * Math.PI) / 180;
+    const R = 6371; // Earth's radius in kilometers
+
+    const dLat = toRadians(lat2 - lat1);
+    const dLon = toRadians(lon2 - lon1);
+
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // Distance in kilometers
+};
 
 // Create Trip with automatic distance calculation
 exports.createTrip = async (req, res) => {
-    const { origin, destination } = req.body;
+    const { origin, destination, fare } = req.body;
 
-    if (!origin || !destination) {
-        return res.status(400).json({ error: 'Origin and destination are required' });
+    if (!origin || !destination || !fare) {
+        return res.status(400).json({ error: 'Origin, destination, and fare are required' });
     }
 
     try {
+        // Ensure origin and destination are passed as arrays [lat, lon]
         const distance = calculateDistance(
-            origin.lat, origin.lon,
-            destination.lat, destination.lon
+            origin[0], origin[1],  // origin: [lat, lon]
+            destination[0], destination[1]  // destination: [lat, lon]
         );
 
         const trip = new Trip({
             origin,
             destination,
-            distance
+            fare,
+            distance,
+            rider: req.user.id,  // Assuming user ID is added to the request via authentication middleware
         });
 
         await trip.save();
