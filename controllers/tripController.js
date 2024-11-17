@@ -56,7 +56,7 @@ exports.createTrip = async (req, res) => {
 // Request Trip (Rider)
 exports.requestTrip = async (req, res) => {
     const { origin, destination, fare } = req.body;
-    const riderId = req.user.id; // Assuming user ID is added to the request via authentication middleware
+    const riderId = req.user.id;
 
     try {
         // Validate input
