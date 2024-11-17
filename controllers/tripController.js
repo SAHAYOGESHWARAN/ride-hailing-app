@@ -1,22 +1,6 @@
 const Trip = require('../models/Trip');
 const User = require('../models/User');
-
-// Utility to calculate distance between two coordinates
-const calculateDistance = (lat1, lon1, lat2, lon2) => {
-    const toRadians = (degree) => (degree * Math.PI) / 180;
-    const R = 6371; // Earth's radius in kilometers
-
-    const dLat = toRadians(lat2 - lat1);
-    const dLon = toRadians(lon2 - lon1);
-
-    const a =
-        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(toRadians(lat1)) * Math.cos(toRadians(lat2)) *
-        Math.sin(dLon / 2) * Math.sin(dLon / 2);
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    return R * c; // Distance in kilometers
-};
+const { calculateDistance } = require('../utils/distanceUtils'); 
 
 // Create Trip with automatic distance calculation
 exports.createTrip = async (req, res) => {
@@ -61,10 +45,15 @@ exports.requestTrip = async (req, res) => {
             return res.status(400).json({ error: 'Valid origin, destination, and fare are required' });
         }
 
-        // Calculate distance
+        // Check if origin and destination have coordinates
+        if (!origin.coordinates || !destination.coordinates) {
+            return res.status(400).json({ error: 'Both origin and destination must have coordinates' });
+        }
+
+        // Calculate distance assuming origin and destination coordinates are arrays of [lat, lon]
         const distance = calculateDistance(
-            origin.coordinates[1], origin.coordinates[0],
-            destination.coordinates[1], destination.coordinates[0]
+            origin.coordinates[0], origin.coordinates[1], // origin coordinates: [lat, lon]
+            destination.coordinates[0], destination.coordinates[1] // destination coordinates: [lat, lon]
         );
 
         const newTrip = new Trip({
