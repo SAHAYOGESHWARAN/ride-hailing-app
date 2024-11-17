@@ -1,5 +1,6 @@
 const Trip = require("../models/Trip");
 const User = require("../models/User");
+const { validationResult } = require("express-validator");
 
 // Utility to calculate distance between two coordinates (Haversine formula)
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -177,3 +178,68 @@ exports.previousTrips = async (req, res) => {
     res.status(500).json({ error: "Failed to retrieve trips", details: error.message });
   }
 };
+
+// View trip requests with validation
+exports.viewTripRequests = async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+  
+      const user = await User.findById(req.params.id);
+      if (!user) {
+        return res.status(404).json({ message: "User not found." });
+      }
+  
+      const driverLat = user.driverLat;
+      const driverLong = user.driverLong;
+      const t1 = new Date();
+      t1.setMinutes(t1.getMinutes() - 10);
+  
+      const requestedTrips = await Trip.find({
+        requestedAt: { $gte: t1 },
+        status: "requested",
+      });
+  
+      const result = requestedTrips.filter((trip) => {
+        const km = calculateDistance(
+          driverLat,
+          driverLong,
+          trip.origin.lat,
+          trip.origin.lon
+        );
+        return km <= 10;
+      });
+  
+      res.json(result);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  };
+  
+  // Accept trip with validation
+  exports.acceptTrip = async (req, res) => {
+    try {
+      const errors = validationResult(req);
+      if (!errors.isEmpty()) {
+        return res.status(400).json({ errors: errors.array() });
+      }
+  
+      const { tripId, driverId } = req.body;
+  
+      const updatedTrip = await Trip.findByIdAndUpdate(
+        tripId,
+        { status: "accepted", driverId },
+        { new: true }
+      );
+  
+      if (!updatedTrip) {
+        return res.status(404).json({ message: "Trip not found." });
+      }
+  
+      res.json(updatedTrip);
+    } catch (error) {
+      res.status(500).json({ error: error.message });
+    }
+  };
