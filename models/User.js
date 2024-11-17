@@ -29,7 +29,7 @@ const userSchema = new mongoose.Schema(
         },
         role: {
             type: String,
-            enum: ['rider', 'driver', 'admin'], // Added 'admin' for scalability
+            enum: ['rider', 'driver', 'admin'], 
             required: [true, 'User role is required'],
         },
         isOnline: {
