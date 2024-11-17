@@ -56,46 +56,28 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
     const { email, password } = req.body;
 
-    // Log to check if email and password are received correctly
-    console.log('Email:', email);
-    console.log('Password:', password);
+    if (!email || !password) {
+        return res.status(400).json({ error: 'Email and password are required' });
+    }
 
     try {
-        // Check if email and password are provided in the request
-        if (!email || !password) {
-            return res.status(400).json({ error: 'Email and password are required' });
-        }
-
-        // Check if user exists in the database
         const user = await User.findOne({ email });
-        console.log(user)
-        
-        if (!user) {
 
+        if (!user) {
             return res.status(400).json({ error: 'Invalid credentials' });
         }
-          
-        // Compare the provided password with the hashed password stored in DB
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const isMatch = await bcrypt.compare(password, user.password);
 
+        const isMatch = await bcrypt.compare(password, user.password);
 
         if (!isMatch) {
             return res.status(400).json({ error: 'Invalid credentials' });
         }
 
-        // Generate JWT token
-        const token = jwt.sign(
-            { userId: user._id, role: user.role },
-            process.env.JWT_SECRET,
-            { expiresIn: '24h' }
-        );
+        const token = generateToken(user);
 
-        // Return success response with token
         res.status(200).json({ message: 'Login successful', token });
     } catch (error) {
-        console.error('Login error:', error);
-        res.status(500).json({ error: 'Login failed', details: error.message });
+        handleErrorResponse(res, error, 'Login failed');
     }
 };
 
@@ -117,15 +99,13 @@ exports.toggleDriverStatus = async (req, res) => {
         if (driver.role !== 'driver') {
             return res.status(403).json({ error: 'Only drivers can toggle status' });
         }
-        const updatedDriver = await User.findByIdAndUpdate(
-            driverId,
-            { isOnline: !driver.isOnline },
-            { new: true }
-        );
+
+        driver.isOnline = !driver.isOnline;
+        await driver.save();
 
         res.json({
-            message: `Driver is now ${updatedDriver.isOnline ? 'online' : 'offline'}`,
-            status: updatedDriver.isOnline
+            message: `Driver is now ${driver.isOnline ? 'online' : 'offline'}`,
+            status: driver.isOnline
         });
     } catch (error) {
         handleErrorResponse(res, error, 'Failed to toggle driver status');
@@ -159,12 +139,11 @@ exports.acceptTrip = async (req, res) => {
             return res.status(400).json({ error: 'Driver is offline and cannot accept trips' });
         }
 
-        // Update trip and driver details
         trip.status = 'accepted';
         trip.driverId = driver._id;
         await trip.save();
 
-        driver.isOnline = false; 
+        driver.isOnline = false;
         await driver.save();
 
         res.json({
