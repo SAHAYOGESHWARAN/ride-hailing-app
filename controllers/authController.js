@@ -78,7 +78,7 @@ exports.login = async (req, res) => {
         // Compare the provided password with the hashed password stored in DB
         const hashedPassword = await bcrypt.hash(password, 10);
         const isMatch = await bcrypt.compare(password, user.password);
-        console.log(hashedPassword,"=====", user.password, "====",isMatch)
+
 
         if (!isMatch) {
             return res.status(400).json({ error: 'Invalid credentials' });
