@@ -33,14 +33,14 @@ exports.register = async (req, res) => {
         }
 
         const hashedPassword = await bcrypt.hash(password, 10);
+        console.log("Hashed Password During Registration:", hashedPassword);
 
         const user = new User({
             name,
             email,
             password: hashedPassword,
-            role
+            role,
         });
-
         await user.save();
 
         res.status(201).json({
@@ -64,22 +64,33 @@ exports.login = async (req, res) => {
         const user = await User.findOne({ email });
 
         if (!user) {
-            return res.status(400).json({ error: 'Invalid credentials' });
+            return res.status(400).json({ error: 'User Not Exist' });
         }
 
+        console.log("Input Password:", password); // Debugging
+        console.log("Hashed Password in DB:", user.password); // Debugging
+
+        // Compare the plaintext password with the hashed password
         const isMatch = await bcrypt.compare(password, user.password);
 
         if (!isMatch) {
-            return res.status(400).json({ error: 'Invalid credentials' });
+            return res.status(400).json({ error: 'Password Not Matched' });
         }
 
-        const token = generateToken(user);
+        // Generate JWT token
+        const token = jwt.sign(
+            { userId: user._id, role: user.role },
+            process.env.JWT_SECRET,
+            { expiresIn: '24h' }
+        );
 
         res.status(200).json({ message: 'Login successful', token });
     } catch (error) {
-        handleErrorResponse(res, error, 'Login failed');
+        console.error('Login Error:', error);
+        res.status(500).json({ error: 'Login failed', details: error.message });
     }
 };
+
 
 // Toggle Driver Online/Offline Status
 exports.toggleDriverStatus = async (req, res) => {

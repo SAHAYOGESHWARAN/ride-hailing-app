@@ -1,6 +1,7 @@
 const mongoose = require('mongoose');
 
-const tripSchema = new mongoose.Schema(
+// Define the Trip schema
+const TripSchema = new mongoose.Schema(
     {
         rider: {
             type: mongoose.Schema.Types.ObjectId,
@@ -57,21 +58,25 @@ const tripSchema = new mongoose.Schema(
             type: Date,
             default: null, // Timestamp for when the trip is completed
         },
+        createdAt: {
+            type: Date,
+            default: Date.now, // Explicit timestamp for trip creation
+        },
     },
     { timestamps: true } // Adds createdAt and updatedAt fields automatically
 );
 
+// Define 2dsphere indexes for geospatial queries
+TripSchema.index({ originCoordinates: '2dsphere' });
+TripSchema.index({ destinationCoordinates: '2dsphere' });
 
-tripSchema.index({ originCoordinates: '2dsphere' });
-tripSchema.index({ destinationCoordinates: '2dsphere' });
-
-
-tripSchema.statics.calculateFare = function (distance, ratePerKm, baseFare = 0) {
+// Static method to calculate fare
+TripSchema.statics.calculateFare = function (distance, ratePerKm, baseFare = 0) {
     return parseFloat((distance * ratePerKm + baseFare).toFixed(2)); // Round to 2 decimal places
 };
 
-
-tripSchema.pre('save', function (next) {
+// Middleware for validation before saving
+TripSchema.pre('save', function (next) {
     if (!this.originCoordinates || !this.destinationCoordinates) {
         return next(new Error('Both originCoordinates and destinationCoordinates are required.'));
     }
@@ -83,12 +88,12 @@ tripSchema.pre('save', function (next) {
     next();
 });
 
-
-tripSchema.virtual('tripDuration').get(function () {
+// Virtual field to calculate trip duration (in minutes)
+TripSchema.virtual('tripDuration').get(function () {
     if (this.status === 'completed' && this.completedAt) {
         return Math.round((this.completedAt - this.requestedAt) / 1000 / 60); // Duration in minutes
     }
     return null;
 });
 
-module.exports = mongoose.model('Trip', tripSchema);
+module.exports = mongoose.model('Trip', TripSchema);

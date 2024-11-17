@@ -46,31 +46,10 @@ const userSchema = new mongoose.Schema(
     }
 );
 
-// Hash the password before saving
-userSchema.pre('save', async function (next) {
-    if (this.isModified('password')) {
-        this.password = await bcrypt.hash(this.password, 10);
-    }
-    next();
-});
-
-// Method to check if entered password is correct
-userSchema.methods.comparePassword = async function (enteredPassword) {
-    return bcrypt.compare(enteredPassword, this.password);
-};
-
 // Soft delete method
 userSchema.methods.softDelete = async function () {
     this.isDeleted = true;
     await this.save();
 };
-
-// Virtual field to mask sensitive data when converting to JSON
-userSchema.set('toJSON', {
-    transform: (doc, ret) => {
-        delete ret.password; // Remove password from JSON responses
-        delete ret.__v; // Remove version key
-    },
-});
 
 module.exports = mongoose.model('User', userSchema);
