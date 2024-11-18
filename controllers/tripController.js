@@ -97,10 +97,11 @@ exports.requestTrip = async (req, res) => {
 // Accept Trip (Driver)
 exports.acceptTrip = async (req, res) => {
   const { tripId } = req.body;
+  console.log("vbnmhj",req.user)
   const driverId = req.user.id;
 
   try {
-    const trip = await Trip.findById(tripId).populate("rider", "name email");
+    const trip = await Trip.findById(tripId);
     if (!trip) {
       return res.status(404).json({ error: "Trip not found" });
     }
@@ -110,6 +111,7 @@ exports.acceptTrip = async (req, res) => {
     }
 
     const driver = await User.findById(driverId);
+    console.log("dcfvghnjm",driverId)
     if (!driver || !driver.isOnline || driver.role !== "driver") {
       return res.status(403).json({ error: "Invalid driver or driver is offline" });
     }
@@ -185,28 +187,3 @@ exports.previousTrips = async (req, res) => {
     res.status(500).json({ error: "Failed to retrieve trips", details: error.message });
   }
 };
-  // Accept trip with validation
-  exports.acceptTrip = async (req, res) => {
-    try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-      }
-  
-      const { tripId, driverId } = req.body;
-  
-      const updatedTrip = await Trip.findByIdAndUpdate(
-        tripId,
-        { status: "accepted", driverId },
-        { new: true }
-      );
-  
-      if (!updatedTrip) {
-        return res.status(404).json({ message: "Trip not found." });
-      }
-  
-      res.json(updatedTrip);
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-  };

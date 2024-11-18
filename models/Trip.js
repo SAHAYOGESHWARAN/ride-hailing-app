@@ -1,17 +1,4 @@
 const mongoose = require("mongoose");
-
-// User Schema
-const userSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  email: { type: String, required: true, unique: true },
-  role: { type: String, default: "driver" },
-  driverLat: { type: Number, default: null },
-  driverLong: { type: Number, default: null },
-});
-
-// Use existing model if already created, or create a new one
-const User = mongoose.models.User || mongoose.model("User", userSchema);
-
 // Trip Schema
 const tripSchema = new mongoose.Schema(
   {
@@ -43,7 +30,7 @@ const tripSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["requested", "in-progress", "completed", "cancelled"],
+      enum: ["requested", "accepted", "completed", "cancelled"],
       default: "requested",
     },
     requestedAt: {

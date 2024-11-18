@@ -51,17 +51,7 @@ router.post(
 // Input validation and role authorization
 router.post(
   "/accept",
-  authenticateToken, // Ensure the user is authenticated with a token
-  [
-    body("tripId", "Trip ID is required and must be a valid MongoDB ID").notEmpty().isMongoId(),
-  ],
-  (req, res, next) => {
-    const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
-    next();
-  },
+  auth,
   authorizeRoles(["driver"]), // Restrict access to drivers only
   acceptTrip // Controller function to handle trip acceptance
 );
