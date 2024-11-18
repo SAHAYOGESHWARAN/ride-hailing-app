@@ -22,15 +22,15 @@ const rateLimiter = rateLimit({
 
 // Role-based access control (RBAC) middleware
 const authorizeRoles = (roles) => {
-  return (req, res, next) => {
-    const userRole = userRole;
-
-    if (!roles.includes(userRole)) {
-      return res.status(403).json({ error: "You do not have permission to access this route." });
-    }
-    next();
+    return (req, res, next) => {
+      const userRole = req.user?.role; 
+  
+      if (!userRole || !roles.includes(userRole)) {
+        return res.status(403).json({ error: "You do not have permission to access this route." });
+      }
+      next();
+    };
   };
-};
 
 // Request Trip (Rider) - Protected by auth middleware
 // Input validation and rate limiting
