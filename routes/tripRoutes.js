@@ -23,7 +23,7 @@ const rateLimiter = rateLimit({
 // Role-based access control (RBAC) middleware
 const authorizeRoles = (roles) => {
   return (req, res, next) => {
-    const userRole = req.user?.role;
+    const userRole = userRole;
 
     if (!roles.includes(userRole)) {
       return res.status(403).json({ error: "You do not have permission to access this route." });
