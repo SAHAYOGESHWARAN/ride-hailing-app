@@ -61,17 +61,16 @@ exports.login = async (req, res) => {
     }
 
     try {
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email }).lean();
 
         if (!user) {
             return res.status(400).json({ error: 'User Not Exist' });
         }
 
-        console.log("Input Password:", password); // Debugging
-        console.log("Hashed Password in DB:", user.password); // Debugging
-
+       
         // Compare the plaintext password with the hashed password
         const isMatch = await bcrypt.compare(password, user.password);
+       
 
         if (!isMatch) {
             return res.status(400).json({ error: 'Password Not Matched' });
@@ -86,7 +85,7 @@ exports.login = async (req, res) => {
 
         res.status(200).json({ message: 'Login successful', token });
     } catch (error) {
-        console.error('Login Error:', error);
+        
         res.status(500).json({ error: 'Login failed', details: error.message });
     }
 };

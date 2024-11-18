@@ -59,4 +59,4 @@ const tripSchema = new mongoose.Schema(
 // Use existing model if already created, or create a new one
 const Trip = mongoose.models.Trip || mongoose.model("Trip", tripSchema);
 
-module.exports = { User, Trip };
+module.exports = Trip

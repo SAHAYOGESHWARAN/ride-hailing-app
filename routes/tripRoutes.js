@@ -1,6 +1,5 @@
 const express = require("express");
 const { body, validationResult } = require("express-validator");
-const rateLimit = require("express-rate-limit");
 const {
   createTrip,
   requestTrip,
@@ -13,18 +12,12 @@ const auth = require("../middleware/auth");
 
 const router = express.Router();
 
-// Rate limiting middleware to prevent abuse (applies to trip request route)
-const rateLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each user to 5 requests per window
-  message: "Too many requests, please try again later.",
-});
-
 // Role-based access control (RBAC) middleware
 const authorizeRoles = (roles) => {
+ 
     return (req, res, next) => {
       const userRole = req.user?.role; 
-      
+
       if (!userRole || !roles.includes(userRole)) {
         return res.status(403).json({ error: "You do not have permission to access this route." });
       }
@@ -37,7 +30,6 @@ const authorizeRoles = (roles) => {
 router.post(
   "/request",
   auth, // Ensure the user is authenticated
-  rateLimiter, // Apply rate limiting
   [
     // Validate the input data
     body("origin", "Origin is required and must be an object").notEmpty().isObject(),
@@ -76,7 +68,7 @@ router.post(
 
 // View Nearby Trip Requests (Driver)
 router.get(
-  "/view-trip-requests/:id",
+  "/view-trip-requests",
   auth, // Ensure the user is authenticated
   authorizeRoles(["driver"]), // Restrict to drivers
   viewTripRequests // Controller function to retrieve nearby trips

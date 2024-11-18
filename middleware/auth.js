@@ -20,9 +20,11 @@ const authenticateToken = (req, res, next) => {
                 return res.status(401).json({ error: 'Invalid token. Authentication failed.' });
             }
 
+            console.log(decoded)
+
             // Attach user details from the token to the request object
             req.user = {
-                id: decoded.id,
+                id: decoded.userId,
                 email: decoded.email,
                 role: decoded.role, 
                 issuedAt: decoded.iat,

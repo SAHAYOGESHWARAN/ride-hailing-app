@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 
+// Define the User schema
 const userSchema = new mongoose.Schema(
   {
     name: {
@@ -51,7 +52,7 @@ const userSchema = new mongoose.Schema(
   {
     timestamps: true,
   }
-);
+)
 
 // Soft delete method
 userSchema.methods.softDelete = async function () {
@@ -59,6 +60,7 @@ userSchema.methods.softDelete = async function () {
   await this.save();
 };
 
+// Check if the model already exists before defining it
+const User = mongoose.models.User || mongoose.model("User", userSchema);
 
-
-module.exports = mongoose.model("User", userSchema);
+module.exports = User;

@@ -60,6 +60,8 @@ exports.requestTrip = async (req, res) => {
 
   try {
     if (!rider || !origin || !origin.lat || !origin.lon || !destination || !destination.lat || !destination.lon || !fare || fare <= 0) {
+      
+
       return res.status(400).json({ error: "Invalid request data." });
     }
 
@@ -77,6 +79,8 @@ exports.requestTrip = async (req, res) => {
       status: "requested",
       requestedAt: new Date(),
     });
+    
+    console.log("jhfjshjkashfdjkshfhksf",newTrip)
 
     await newTrip.save();
 
@@ -128,7 +132,9 @@ exports.acceptTrip = async (req, res) => {
 // View Nearby Trip Requests (Driver)
 exports.viewTripRequests = async (req, res) => {
   try {
+    console.log(req.user.id)
     const user = await User.findById(req.user.id);
+    console.log("++++++++++", user)
     if (!user || user.role !== "driver") {
       return res.status(403).json({ error: "Unauthorized access" });
     }
@@ -136,12 +142,12 @@ exports.viewTripRequests = async (req, res) => {
     const { driverLat, driverLong } = user;
     const t1 = new Date();
     t1.setMinutes(t1.getMinutes() - 10);
-
+    console.log("time:", t1, driverLat, driverLong)
     const requestedTrips = await Trip.find({
-      requestedAt: { $gte: t1 },
+      //requestedAt: { $gte: t1 },
       status: "requested",
     });
-
+    console.log("respose",requestedTrips )
     const nearbyTrips = requestedTrips.filter((trip) => {
       const distance = calculateDistance(driverLat, driverLong, trip.origin.lat, trip.origin.lon);
       return distance <= 10; // Within 10 kilometers
@@ -179,64 +185,6 @@ exports.previousTrips = async (req, res) => {
     res.status(500).json({ error: "Failed to retrieve trips", details: error.message });
   }
 };
-
-// View trip requests with validationexports.viewTripRequests = async (req, res) => {
-    exports.viewTripRequests = async (req, res) => {
-        try {
-          // Validate incoming request
-          const errors = validationResult(req);
-          if (!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() });
-          }
-      
-          // Check for user ID in request parameters
-          const userId = req.params.id;
-          if (!userId) {
-            return res.status(400).json({ message: "User ID is required in the parameters." });
-          }
-      
-          // Find the user by ID
-          const user = await User.findById(userId);
-          if (!user) {
-          
-            return res.status(404).json({ message: "User not found." });
-          }
-      
-          // Get driver's location
-          const { driverLat, driverLong } = user;
-          if (!driverLat || !driverLong) {
-            console.error("Driver's location data missing:", { driverLat, driverLong });
-            return res.status(400).json({ message: "Driver's location data is missing." });
-          }
-      
-          // Fetch trips requested within the last 10 minutes
-          const tenMinutesAgo = new Date();
-          tenMinutesAgo.setMinutes(tenMinutesAgo.getMinutes() - 10);
-      
-          const requestedTrips = await Trip.find({
-            requestedAt: { $gte: tenMinutesAgo },
-            status: "requested",
-          });
-      
-          // Filter trips based on proximity
-          const result = requestedTrips.filter((trip) => {
-            const distanceInKm = calculateDistance(
-              driverLat,
-              driverLong,
-              trip.origin.lat,
-              trip.origin.lon
-            );
-            return distanceInKm <= 10;
-          });
-      
-          // Respond with filtered trips
-          res.json(result);
-        } catch (error) {
-          console.error("Error in viewTripRequests:", error); // Debugging
-          res.status(500).json({ error: "Internal Server Error", details: error.message });
-        }
-      };
-  
   // Accept trip with validation
   exports.acceptTrip = async (req, res) => {
     try {
