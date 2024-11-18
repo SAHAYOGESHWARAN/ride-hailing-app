@@ -2,7 +2,7 @@
 function calculateDistance(lat1, lon1, lat2, lon2) {
     const toRadians = (degree) => (degree * Math.PI) / 180;
 
-    const R = 6371; // Earth's radius in kilometers
+    const R = 6371; 
 
     const dLat = toRadians(lat2 - lat1);
     const dLon = toRadians(lon2 - lon1);
@@ -14,7 +14,7 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 
-    return R * c; // Distance in kilometers
+    return R * c; 
 }
 
 module.exports = { calculateDistance };

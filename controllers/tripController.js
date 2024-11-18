@@ -2,6 +2,7 @@ const Trip = require("../models/Trip");
 const User = require("../models/User");
 const { validationResult } = require("express-validator");
 
+
 // Utility to calculate distance between two coordinates (Haversine formula)
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
   const toRadians = (degree) => (degree * Math.PI) / 180;
@@ -179,44 +180,62 @@ exports.previousTrips = async (req, res) => {
   }
 };
 
-// View trip requests with validation
-exports.viewTripRequests = async (req, res) => {
-    try {
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        return res.status(400).json({ errors: errors.array() });
-      }
-  
-      const user = await User.findById(req.params.id);
-      if (!user) {
-        return res.status(404).json({ message: "User not found." });
-      }
-  
-      const driverLat = user.driverLat;
-      const driverLong = user.driverLong;
-      const t1 = new Date();
-      t1.setMinutes(t1.getMinutes() - 10);
-  
-      const requestedTrips = await Trip.find({
-        requestedAt: { $gte: t1 },
-        status: "requested",
-      });
-  
-      const result = requestedTrips.filter((trip) => {
-        const km = calculateDistance(
-          driverLat,
-          driverLong,
-          trip.origin.lat,
-          trip.origin.lon
-        );
-        return km <= 10;
-      });
-  
-      res.json(result);
-    } catch (error) {
-      res.status(500).json({ error: error.message });
-    }
-  };
+// View trip requests with validationexports.viewTripRequests = async (req, res) => {
+    exports.viewTripRequests = async (req, res) => {
+        try {
+          // Validate incoming request
+          const errors = validationResult(req);
+          if (!errors.isEmpty()) {
+            return res.status(400).json({ errors: errors.array() });
+          }
+      
+          // Check for user ID in request parameters
+          const userId = req.params.id;
+          if (!userId) {
+            return res.status(400).json({ message: "User ID is required in the parameters." });
+          }
+      
+          // Find the user by ID
+          const user = await User.findById(userId);
+          if (!user) {
+          
+            return res.status(404).json({ message: "User not found." });
+          }
+      
+          // Get driver's location
+          const { driverLat, driverLong } = user;
+          if (!driverLat || !driverLong) {
+            console.error("Driver's location data missing:", { driverLat, driverLong });
+            return res.status(400).json({ message: "Driver's location data is missing." });
+          }
+      
+          // Fetch trips requested within the last 10 minutes
+          const tenMinutesAgo = new Date();
+          tenMinutesAgo.setMinutes(tenMinutesAgo.getMinutes() - 10);
+      
+          const requestedTrips = await Trip.find({
+            requestedAt: { $gte: tenMinutesAgo },
+            status: "requested",
+          });
+      
+          // Filter trips based on proximity
+          const result = requestedTrips.filter((trip) => {
+            const distanceInKm = calculateDistance(
+              driverLat,
+              driverLong,
+              trip.origin.lat,
+              trip.origin.lon
+            );
+            return distanceInKm <= 10;
+          });
+      
+          // Respond with filtered trips
+          res.json(result);
+        } catch (error) {
+          console.error("Error in viewTripRequests:", error); // Debugging
+          res.status(500).json({ error: "Internal Server Error", details: error.message });
+        }
+      };
   
   // Accept trip with validation
   exports.acceptTrip = async (req, res) => {
